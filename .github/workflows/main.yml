@@ -1,0 +1,45 @@
+name: CI do Projeto Completo
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Start Docker Compose
+      run: docker-compose up -d --build
+
+    - name: Wait for server to be ready
+      uses: jakejarvis/wait-action@v0.2.0
+      with:
+        url: 'http://localhost:3000/items'
+        time: '30s'
+
+    - name: Install Test Dependencies
+      run: npm install
+      working-directory: ./backend
+
+    - name: Run tests
+      run: npm test
+      working-directory: ./backend
+
+    - name: Check Docker logs (only on failure)
+      if: failure()
+      run: docker-compose logs
+
+    - name: Stop Docker Compose
+      if: always()
+      run: docker-compose down
